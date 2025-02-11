@@ -97,7 +97,7 @@ class SwingData:
                 "PixSize_x": pixel_size_x, "PixSize_z": pixel_size_z,
                 "SampleDistance": distance_m,
                 "Dim_1": eiger.shape[1], "Dim_2": eiger.shape[2],
-                "Binning_1": int(bin_x), 'Binning_2': int(bin_y),
+                "Binning_1": bin_x, 'Binning_2': int(bin_y),
                 "nb_frames": nb_frames,
                 "exposure_time": exposure_time,
                 "averagemi8b": averagemi8b,
@@ -465,9 +465,6 @@ class SwingBatch:
         print('------------ Process Finish ------------')
 
 
-import numpy as np
-
-import numpy as np
 
 class TextFileProcessor:
     def __init__(self):
@@ -531,5 +528,5 @@ class TextFileProcessor:
 
         # Save the result to the new file
         np.savetxt(output_path, np.column_stack((q1, i_subtracted)), header="q  i_subtracted", comments="")
-        print(f"Subtraction completed. Result saved to {output_path}")
+        print(f"Substraction completed. Result saved to {output_path}")
 
