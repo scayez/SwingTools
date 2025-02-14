@@ -1,7 +1,7 @@
 ## Overview
 
 The `SwingData` and `SwingBatch` classes are designed to extract, integrate, and plot synchrotron data from HDF5 files. They leverage libraries such as **pyFAI** for azimuthal integration and **fabio** for reading image data. The code also supports saving integration results to text files and generating summary plots and videos.
-
+An additional class 'Mask' is also implemented to allow the defintion of masks to be applied to detector images.
 ---
 
 ## Classes
