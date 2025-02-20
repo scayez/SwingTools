@@ -17,9 +17,9 @@ The analysis pipeline provided by these classes is designed to streamline the pr
 Together, these classes enable efficient, automated conversion of raw synchrotron data into quantitative results and visualizations, ensuring robust handling of various file formats and experimental conditions.
 
 
----
-
 ## Classes
+
+---
 
 ### 1. Mask
 
@@ -50,6 +50,8 @@ This method converts foxtrot masks (*.txt) files in the suitable *.edf format.
 **Parameters:**
 
 path to foxtrot mask
+
+---
 
 ### 2. SwingData
 
@@ -96,7 +98,6 @@ For anisotropic data, additional operations are applied:
 - **Caving**: Detector frames are reconstructed using inversion symmetry to partially suppress beamstop effects, dead pixels, and detector gaps. A new mask file is generated and applied automatically.
 - **2D Integration**: Generates 2D maps (q, chi, and intensity) for further analysis of azimuthal profiles.
 
----
 
 **Key Methods:**
 
@@ -163,7 +164,6 @@ For anisotropic data, additional operations are applied:
 
 ---
 
-
 ### 3. SwingBatch
 
 **Purpose:**
@@ -186,7 +186,6 @@ A `SwingBatch` instance can be initialized with the following parameters:
 - **log_file** (`str`): Name of the log file to be created in the data directory. *(Default: `"processing_log.txt"`)*
 - **sectors** (`list` of `tuple`): List of angular sectors defined as `(angle, delta_angle)` for azimuthal integration. *(Default: `[(0, 180)]` if not provided)*
 
----
 
 **Key Methods:**
 
