@@ -14,8 +14,29 @@ import subprocess
 from IPython.display import clear_output
 
 class Mask:
+    """
+    A class for generating and converting mask files for scattering experiments.
+
+    Handles two primary input formats:
+    - Foxtrot-generated *.txt mask files (conversion to EDF format)
+    - Swing/HDF5 (*.h5) data files (mask creation via pyFAI-drawmask GUI)
+
+    When instantiated with a file path, automatically determines appropriate processing
+    methods based on file extension and contents.
+
+    Example:
+        mask = Mask(filepath)  # Where filepath points to either .txt or .h5 file
+    """
     def __init__(self,file:str):
-        """file : str can be *.h5 file (methods nxs2edf and draw_mask) or foxtrot mask (method convertfoxtrotmask)"""
+        """
+        Initialize Mask instance with input file path.
+
+        Parameters:
+            file : str 
+                Path to either:
+                - Swing/HDF5 (.h5/.nxs) file for mask creation (draw_mask())
+                - Foxtrot .txt mask file for format conversion (convertfoxtrotmask())
+        """
         self.file=file
         self.path=os.path.dirname(file)
         self.folder=self.path
@@ -23,23 +44,48 @@ class Mask:
 
     def convertfoxtrotmask(self):
             """
-            maskfile:str Path to foxtrot mask file
-            Convert a mask file created in foxtrot to *.edf format, used in SwingData class, sasview,...
-            Note that the convention is different in foxtrot (1 becomes 0 and vice-versa)
+            Convert Foxtrot text mask to EDF format with proper value convention.
+
+            Processes the mask file specified during initialization, inverting pixel values
+            (0↔1) to match standard EDF mask conventions. Output is saved in the same
+            directory as the input file with .edf extension.
+
+            Note:
+            - Foxtrot uses 1 for masked pixels, while EDF format uses 0
+            - Original file is not modified
+            - Output file is saved in input file's directory
             """
             maskfile=self.file
+            # Load Foxtrot mask with inverted convention (1 = masked)
             maskarray=np.loadtxt(maskfile,delimiter=';')
+            # Invert mask values to match EDF convention (0 = masked)
             mask_ok=1-maskarray
+            # Generate output path preserving input filename with .edf extension
             outputname=os.path.dirname(maskfile)+'/'+os.path.splitext(os.path.basename(maskfile))[0]+".edf"
+             # Create and save EDF image using fabio
             obj = fabio.edfimage.EdfImage(data=mask_ok)
             obj.write(outputname)
         
-    
 
     def draw_mask(self):
+        """
+        Launch pyFAI-drawmask GUI to create custom masks from Swing/HDF5 data.
+
+        Processes the HDF5 file specified during initialization to:
+        1. Extract detector geometry parameters
+        2. Load scattering data (averaged if multi-frame)
+        3. Generate temporary EDF file with proper metadata
+        4. Launch pyFAI-drawmask GUI
+        5. Clean up temporary files after GUI closure
+
+        Important:
+            - User must manually save mask through GUI before exiting
+            - Saved mask should be in EDF format for compatibility
+            - Temporary files are automatically removed post-processing
+        """
         with h5py.File(self.file, "r") as f:
             group = list(f.keys())[0]
-            self.folder=os.getcwd()
+            self.folder=os.getcwd() # Set working directory for GUI output
             # Retrieve experimental parameters from the Eiger-4M group
             target = group + '/SWING/EIGER-4M'
             self.distance_m = f[target + '/distance'][0] / 1000  # Convert distance to meters
@@ -61,10 +107,13 @@ class Mask:
             if eiger_raw.shape[1] == 1:
                 eiger_raw = eiger_raw.squeeze(axis=1)
         
+        # Prepare data for mask creation
         if eiger_raw.ndim==2:
-            data=eiger_raw
+            data=eiger_raw # Single frame data
         else:
+            # Average over frames for multi-frame datasets
             data=np.mean(eiger_raw,axis=0)
+        # Construct EDF header with geometry parameters
         header={'SampleDistance':self.distance_m,
                 'WaveLength':self.wl,
                 'Dim_1':data.shape[0],
@@ -73,9 +122,11 @@ class Mask:
                 'Pixel_2':self.pixel_size_z,
                 'Center_1':self.x_center,
                 'Center_2':self.z_center}
+        # Create temporary EDF file for pyFAI-drawmask input
         file=self.folder+'/temp.edf'
         obj = fabio.edfimage.EdfImage(header=header,data=data)
         obj.write(file) 
+       
         command = ['pyFAI-drawmask', file]
         
         # Run the command using subprocess.run() and capture output and errors
@@ -84,6 +135,8 @@ class Mask:
             del(os.environ['QT_QPA_PLATFORM_PLUGIN_PATH'])
         except:
             pass
+
+        # Launch pyFAI-drawmask GUI
         try:
             result = subprocess.run(command, check=True, text=True, capture_output=True, cwd=self.folder)
             print(result.stdout)
@@ -91,6 +144,8 @@ class Mask:
             print(f"Error occurred: {e}")
             print(f"stderr: {e.stderr}")
             print(f"stdout: {e.stdout}")
+
+        # Cleanup temporary file
         os.remove(file)
 
 class SwingData:
@@ -795,6 +850,26 @@ class SwingBatch:
         print('------------ Process Finish ------------')
 
 class TextFileProcessor:
+    """
+    A class to handle text file processing for scientific data, specifically for 
+    loading and subtracting intensity data from files in Foxtrot-format.
+
+    Attributes:
+        files (dict): A dictionary to store loaded file data with paths as keys 
+                      and tuples of (q-values, intensity) as values.
+
+    Methods:
+        load_txt(path):
+            Loads a text file containing q and intensity (i) data, automatically 
+            determining the correct number of header lines to skip.
+
+        get_data(path):
+            Retrieves the (q, i) data for a given file path if it has been loaded.
+
+        subtract_files(file1, file2):
+            Subtracts the intensity data of two files, interpolating if necessary, 
+            and saves the result in a 'sub' folder within the directory of the first file.
+    """
     def __init__(self):
         """Initialize the object with a dictionary to store file data."""
         self.files = {}
